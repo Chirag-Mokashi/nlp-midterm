@@ -57,8 +57,10 @@ want three clearly separated results rather than a middle row I would have to
 explain away, and over the feedforward because a fixed window is closer to a
 wider bigram than to a genuine context model.
 
-*(To fill in myself: the specific thing about the LSTM cell state that I had
-to ask about twice before it made sense.)*
+**What took me longest:** the gate equations — specifically that the cell state
+`c_t` is an additive conveyor belt running the length of the sequence, while the
+hidden state `h_t` is a filtered view of it that gets read out at each step. It
+took two different explanations before that clicked.
 
 ### 2026-11-01 — Hour 1: dataset and setup
 
@@ -73,7 +75,11 @@ nats). These matter because they tell me what a *meaningless* result looks
 like — a model scoring 3.4 would look like it was learning when it had only
 learned which letters are common.
 
-**What I did:** *(to fill in — verify the numbers, confirm the split choice.)*
+**What I did:** I checked the corpus statistics, the vocabulary size and the two
+baselines against the notebook's own output rather than taking them on trust. I
+also confirmed the decision to use a contiguous 90/10 train/validation split:
+with a random split, the overlapping 128-character windows would put a window's
+immediate neighbours on the other side of the split and leak the answer.
 
 ### 2026-11-01 — Hour 2: bigram
 
@@ -126,8 +132,12 @@ I also decided that the crossover gets **reported in the write-up**, with the
 full learning curve, rather than being left hidden inside a hyperparameter
 choice.
 
-*(To fill in myself: whether I still think that was the right call after seeing
-the full run.)*
+**Having now seen the full run, I think it was the right call.** The crossover
+landed between steps 3,500 and 4,000, so a 5,000-step budget sits past the
+inflection point rather than stopping early at a point that would have flattered
+the LSTM. The final margin is thin — 0.0226 nats — and the LSTM still wins on
+best checkpoint, which is why both numbers are reported rather than only the one
+the budget happened to produce.
 
 **What I did:** ran the real training, and all the numbers in the results table
 come from my own run, not from the AI's pilot runs on a different machine.
@@ -169,13 +179,51 @@ second machine confirmed the ordering between the two models holds, but it is
 not part of the submission — the assignment asks for three models and a
 comparison, and adding an experiment nobody asked for is scope, not rigour.
 
-*(To fill in myself: which of those three corrections I think I should have
-caught on my own re-read, and why I did not.)*
+**The one I should have caught** is the claim that the transformer did worse than
+the LSTM on final validation loss, because it contradicted the answer I had
+given two paragraphs earlier in the same section. Catching it needed no numbers
+at all — only reading my own answers in order. I skimmed my own work instead of
+reading it. The other two are different: the training-versus-validation mislabel
+needs me to remember which column a number came from, and the context-window one
+is only wrong because I matched the two windows deliberately, which is a fact
+about my own experiment design rather than about LSTMs in general.
 
 ---
 
 ## What I understand without assistance
 
-*(To fill in at the end — I will write, in my own words and without looking
-anything up, what each model does and why the transformer wins. If I cannot
-write it, I have not finished the project.)*
+*Written at the end, in one sitting, without looking anything up.*
+
+- **The task and how it is evaluated.** Next-character prediction trains a model
+  to output a probability distribution over the 65 characters in the corpus,
+  given the text that precedes it, optimised by minimising cross-entropy and
+  measured in nats per character. The baselines are what make a loss number
+  mean anything: a uniform guess (ln 65) and the unigram entropy tell you
+  whether the model learned structure or only learned which letters are common.
+
+- **Bigram.** One character of context, stored in a 65x65 count matrix. Many
+  valid character pairs never occur in a corpus this small, so add-1 smoothing
+  is not optional — without it a transition the model never saw gets
+  probability zero and the validation loss is infinite.
+
+- **LSTM.** Extends the context by passing the input through a recurrent cell
+  with gates, in which the cell state acts as an additive conveyor belt. The
+  forget, input and output gates control what is written to it and what is read
+  out, and because that path is additive rather than multiplicative the
+  gradient does not fade away across many steps. That is what lets the network
+  learn spelling, word separation and the `NAME:` tag format.
+
+- **Transformer.** Removes the recurrent compression bottleneck using
+  multi-head self-attention, which computes a direct dot-product relationship
+  between positions inside a 128-character block instead of passing information
+  along one step at a time. Attention is order-agnostic, so learned positional
+  embeddings are needed to impose order on the sequence. A lower-triangular
+  causal mask is compulsory, so that no position can see the character it is
+  being asked to predict.
+
+- **The trade-off between the architectures.** At this scale — 1.1M characters
+  and roughly 830k parameters in each trained model — the LSTM and the small
+  transformer land in much the same place, around 1.52-1.54 nats of validation
+  loss, and the LSTM is faster in wall-clock time. What the transformer buys is
+  not a better number here but the removal of the recurrent limit, which is
+  what makes scaling up and exploiting hardware parallelism possible at all.
