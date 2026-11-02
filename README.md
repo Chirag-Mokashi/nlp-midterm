@@ -3,10 +3,12 @@
 Applied NLP midterm project. Three language models, one task, one dataset, one
 set of hyperparameters, and an honest look at whether attention was worth it.
 
-> **Status: complete.** Every number below is measured from one full training
-> run on a Colab T4, in a single session, with all three models on the same
-> device. The notebook in this repository is the executed version, outputs
-> included.
+> **Status: complete.** Every number in the results table and the figures is
+> measured from one full training run on a Colab T4, in a single session, with
+> all three models on the same device. The notebook in this repository is the
+> executed version, outputs included. Two learning-rate pilot runs are
+> referenced where they are used; those were run separately and are not part of
+> this repository.
 
 ---
 
@@ -49,8 +51,10 @@ means something:
 | Character frequency only (unigram entropy) | 3.3128 |
 
 The second is the one that matters. A model scoring between those two numbers
-looks like it is learning when all it has picked up is that spaces and `e` are
-common.
+has not even matched the character frequencies — it looks like it is learning,
+because it beats a uniform guess, but it is doing worse than a model that
+ignores context entirely and always predicts the overall letter distribution.
+Only a loss below 3.3128 is evidence that context is being used at all.
 
 Details and a re-download command are in [`data/README.md`](data/README.md).
 
@@ -109,7 +113,7 @@ teach it a long-range rule. The LSTM's additive path is why it can *learn* to
 use distant context instead of merely being permitted to.
 
 **Why it still struggles with longer dependencies:** everything it knows about
-the preceding 120 characters must fit in one fixed-size vector, contested by
+the preceding 128 characters must fit in one fixed-size vector, contested by
 everything else competing for space; distance is survivable but not free; and
 it is sequential, so position *t* cannot be computed until *t−1* is.
 
@@ -164,7 +168,14 @@ measure the wrong thing.
   the training batch sequence.
 - **Identical training.** The LSTM and the transformer are trained by the same
   function, with the same context length (128), batch size (64), learning rate
-  (3e-3), optimizer (AdamW), and number of steps (5000), from the same seed.
+  (3e-3), optimizer (AdamW), and number of steps (5000), from the same seed. One
+  caveat that only applies off-GPU: `get_batch` draws its training windows from
+  PyTorch's default CPU generator, and on a **CPU** device `nn.Dropout` draws
+  from that same generator. Since the two models have different numbers of
+  dropout sites, a CPU run gives them different batch sequences from the same
+  seed. On CUDA — and on Apple MPS — dropout uses the device generator instead,
+  so the committed run, which was on a T4, genuinely does give both models the
+  same batch sequence.
 - **Matched capacity.** The LSTM's hidden size is 240 rather than a round 256
   specifically so the two trained models land within **1.8%** of each other on
   parameter count (841,905 vs 826,433). Otherwise "the transformer won" could
@@ -173,7 +184,12 @@ measure the wrong thing.
   architectures at a fixed number of updates; equal wall-clock time would
   instead reward whichever architecture is faster per step. Since speed is
   itself one of the things being compared, the budget is fixed and the time is
-  *reported* as a result.
+  *reported* as a result. One limitation of those reported times: they are
+  `time.perf_counter()` wall-clock with no CUDA synchronisation, and the
+  per-500-step figures show the LSTM's chunks rising 19.6% across the run
+  (9.7s → 11.6s) while the transformer's stay flat (16.3–16.8s). I did not
+  establish why, so the ratio between the two totals is what this run measured,
+  not a fixed property of the architectures.
 - **The bigram's asymmetry is stated, not hidden.** It has no epochs, no
   trainable parameters, and its "training time" is a single counting pass.
 - **Identical sampling.** Same prompt, seed, length and temperature for all
@@ -196,17 +212,23 @@ architecture.
 **It depends on what you mean by best, and both answers are in that table.** At
 the fixed 5,000-step budget the transformer wins on final validation loss, by
 0.0226 nats. On the best checkpoint either model ever reached, the LSTM wins, by
-0.0132 — it peaks at step 2500 and then begins to overfit, while the transformer
-is still improving when the budget runs out. The crossover happens between steps
-3500 and 4000 and is visible directly in the learning-curve plot in the
-notebook's §5.1.
+0.0131.
+
+Both models peaked before the budget ran out and then got worse, which is the
+detail that decides the final number. The LSTM peaked at step 2500 and gave back
+**0.0396** nats by step 5000; the transformer peaked at step 4000 and gave back
+**0.0039** — about ten times less. The crossover happens between steps 3500 and
+4000. It is a real 0.0131-nat difference, but note that the learning-curve plot
+in the notebook's §5.1 has to span the bigram and unigram baselines on its
+y-axis, so at that scale the two validation curves sit almost on top of each
+other; the per-checkpoint numbers are where the difference is readable.
 
 Reporting only one of those would have made the result look cleaner than it is,
 which is why the step budget was chosen before the numbers were known and the
 crossover is reported rather than buried. Full config and losses are in
-[`results/metrics.json`](results/metrics.json); the table above is generated
-from measured values in
-[`results/results_table.md`](results/results_table.md).
+[`results/metrics.json`](results/metrics.json), which is the source for the
+table above; [`results/results_table.md`](results/results_table.md) is the
+notebook's own rendering of the same run, rounded to two decimal places.
 
 ## What did attention improve?
 
@@ -215,12 +237,20 @@ dialogue format, and dependencies reaching far beyond one character — 2.4822 t
 1.5219 nats, a perplexity of 11.97 down to 4.58.
 
 Against the LSTM the improvement in final loss is small, and the more
-interesting difference is in the **shape** of the two learning curves. The LSTM
-compresses the whole 128-character window into one fixed-size state and had
-stopped improving by step 2500; attention lets every position read any earlier
-position directly, and the transformer had not stopped improving by step 5000.
-The train/validation gap says the same thing — 0.465 for the LSTM against 0.339
-for the transformer.
+interesting difference is in the **shape** of the two learning curves. Both
+models reached a best checkpoint and then declined, but the LSTM's decline is an
+order of magnitude steeper — 0.0396 nats given back against 0.0039. The LSTM
+also drove its *training* loss 0.104 lower than the transformer managed (1.0792
+against 1.1834) while finishing with the worse validation loss, which is
+overfitting visible directly in the numbers. The train/validation gap says the
+same thing — 0.465 for the LSTM against 0.339 for the transformer.
+
+One caveat on that last figure: at the same nominal `dropout=0.1` the
+transformer carries **eight** dropout sites (attention and feedforward in each of
+four blocks) against the LSTM's **one**, because `nn.LSTM` applies dropout only
+*between* stacked layers. The transformer is the more heavily regularised model,
+which is enough on its own to shrink its train/validation gap, so that gap is
+not evidence about attention by itself.
 
 Looking at the attention weights themselves (§4.4 of the notebook) shows
 something the loss number cannot: the four heads in the first block specialise
@@ -228,6 +258,8 @@ on their own. Two are almost purely local, a single bright diagonal; the other
 two spread their weight widely over earlier positions, and one shows a vertical
 stripe where many later positions attend back to one particular earlier
 character. Nothing in the objective asks them to divide the work up that way.
+That map is one attention pattern from one validation sequence, so it
+illustrates what the trained model does rather than measuring it across the set.
 
 ## What did I learn from this project?
 
@@ -236,8 +268,9 @@ comparison is messier than the clean one.
 
 - **The step budget picked the winner.** At `lr=3e-3` the LSTM leads for the
   first ~3,500 steps and the transformer overtakes after; at `lr=1e-3` the
-  transformer never catches up at all. Stopping at 2,000 steps or at 10,000
-  would have produced two different conclusions from the same code.
+  transformer never catches up at all *(pilot run, not included in this
+  repository)*. Stopping at 2,000 steps would have produced the opposite
+  conclusion from the same code — at step 2000 the LSTM leads 1.5160 to 1.5552.
 - **Equal steps and equal wall-clock time are different experiments.** They
   reward different architectures, and which one you choose has to be decided
   and stated before the numbers arrive.

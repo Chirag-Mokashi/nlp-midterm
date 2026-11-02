@@ -7,7 +7,10 @@ format `SPEAKER:` followed by that speaker's lines. It is the standard small
 corpus for character-level language modelling.
 
 `input.txt` is committed to this repository (1.1 MB), so the notebook runs with
-no download step.
+no download step once the repository is cloned. The committed run was executed
+in a bare Colab session without the clone, which is why its first cell reports
+`downloaded the dataset`; the file fetched there is byte-identical to this one,
+as the checksum below confirms.
 
 ## Measured properties
 

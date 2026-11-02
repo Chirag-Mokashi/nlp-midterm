@@ -72,8 +72,9 @@ introduces no character the training split has never seen.
 It also computed two baselines I had not thought to ask for: the uniform-guess
 loss (`ln 65` = 4.1744 nats) and the character-frequency-only loss (3.3128
 nats). These matter because they tell me what a *meaningless* result looks
-like — a model scoring 3.4 would look like it was learning when it had only
-learned which letters are common.
+like — a model scoring 3.4 would look like it was learning, because it beats a
+uniform guess, when in fact it is doing worse than simply predicting the overall
+letter frequencies.
 
 **What I did:** I checked the corpus statistics, the vocabulary size and the two
 baselines against the notebook's own output rather than taking them on trust. I
@@ -174,10 +175,13 @@ observation. It now describes what is actually visible. I had also written in
 the two were indistinguishable; the §4.3 reading is the honest one and both now
 say so.
 
-**What I decided not to do.** A seed-variance check across three seeds on a
-second machine confirmed the ordering between the two models holds, but it is
-not part of the submission — the assignment asks for three models and a
-comparison, and adding an experiment nobody asked for is scope, not rigour.
+**What I decided not to do.** I considered a seed-variance check across several
+seeds to see whether the ordering between the two models is stable, and decided
+against it — the assignment asks for three models and a comparison, and adding
+an experiment nobody asked for is scope, not rigour. The consequence is worth
+stating plainly rather than hiding: the 0.023-nat margin between the LSTM and
+the transformer is a single-seed result, and I have no evidence about how much
+of it is seed noise.
 
 **The one I should have caught** is the claim that the transformer did worse than
 the LSTM on final validation loss, because it contradicted the answer I had
@@ -187,6 +191,60 @@ reading it. The other two are different: the training-versus-validation mislabel
 needs me to remember which column a number came from, and the context-window one
 is only wrong because I matched the two windows deliberately, which is a fact
 about my own experiment design rather than about LSTMs in general.
+
+### 2026-11-02 — A cold review of the finished submission
+
+**What I asked:** before making the repository public, for the whole submission
+to be checked over again from scratch — every number re-derived from the corpus
+and from `metrics.json` rather than read back off my own tables, and every claim
+in the notebook, the README and this file checked against the executed outputs.
+
+**The one that mattered.** I had written, in four places, that the transformer
+"was still improving when the budget ran out." It was not. `metrics.json` records
+its best checkpoint at step **4000**, and it got slightly *worse* over the last
+thousand steps (1.5180 → 1.5219). I had built a conclusion on that premise — that
+a longer run would most likely flip the result — and the premise was not in my
+own data. What my data does show is that both models peaked before the budget
+ended and that the LSTM's decline afterwards is about ten times steeper (0.0396
+nats against 0.0039). That supports the same conclusion and is true, so that is
+what the write-up now says.
+
+**Two claims I had attributed to a cause I never measured.** I first explained
+the transformer's steadier curve by its residual connections and multi-head
+attention, and the LSTM's sharper decline by the fixed 128-character window.
+Neither
+survives: the window is identical for both models by design, and the transformer
+carries **eight** dropout sites to the LSTM's **one**, because `nn.LSTM` applies
+dropout only between stacked layers. At the same nominal `p=0.1` the transformer
+is simply the more regularised model, which is enough on its own to explain the
+smaller train/validation gap. The observation stays; the mechanism is gone, and
+the dropout asymmetry is now stated wherever that gap is discussed.
+
+**Smaller things that were wrong.** The opening table in the notebook still said
+the LSTM sees "the whole sequence, in principle" against the transformer's "the
+whole block" — the same context-window error I had already corrected in §6 and
+left standing in the first table a reader meets. My interpretation of the
+baselines was backwards in three places: a model scoring between 4.1744 and
+3.3128 has *not* "only learned which letters are common," it is doing worse than
+that. The README's status banner claimed every number in it came from one
+measured run, while two learning-rate pilot figures came from somewhere else
+entirely. A reference to §4.1 should have been §4.4, "the preceding 120
+characters" should have been 128, and `requirements.txt` was missing the package
+needed to follow my own local-install instructions.
+
+**What I now know about the timings that I did not before.** The training times
+are `time.perf_counter()` wall-clock with no CUDA synchronisation, and reading
+the per-500-step figures back shows the LSTM's chunks rising 19.6% across a
+constant workload while the transformer's stay flat. I do not know why, and I
+have deliberately not guessed: a plausible-sounding explanation with no
+measurement behind it is exactly the kind of claim this review existed to catch.
+The 60% figure is now described as what this run measured rather than as a
+property of the architectures.
+
+**The pattern across all of it.** Every one of these had been read over by me
+more than once. What found them was re-deriving the numbers independently
+instead of re-reading the sentences, and the one real error was in the only
+claim I had never had a number for.
 
 ---
 
@@ -221,9 +279,9 @@ about my own experiment design rather than about LSTMs in general.
   causal mask is compulsory, so that no position can see the character it is
   being asked to predict.
 
-- **The trade-off between the architectures.** At this scale — 1.1M characters
-  and roughly 830k parameters in each trained model — the LSTM and the small
-  transformer land in much the same place, around 1.52-1.54 nats of validation
-  loss, and the LSTM is faster in wall-clock time. What the transformer buys is
+- **The trade-off between the architectures.** At this scale — 1.1M characters,
+  and 842k parameters in the LSTM against 826k in the transformer — the two
+  land in much the same place, around 1.52-1.54 nats of validation loss, and the
+  LSTM is faster in wall-clock time. What the transformer buys is
   not a better number here but the removal of the recurrent limit, which is
   what makes scaling up and exploiting hardware parallelism possible at all.
