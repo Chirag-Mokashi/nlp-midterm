@@ -1,0 +1,25 @@
+Transformer - validation loss 1.5219 nats
+prompt: newline, 500 characters, temperature 1.0, seed 1337
+----------------------------------------------------------------------
+
+
+All:
+If this wrong'd and, being it were exteen.
+
+JOHN OF GAUNT:
+My Lord prepare it to be determined
+From whom hence, when my known proof it.
+Bid her welcome,
+Whilst, send in late, that Grumio's head
+By his eyes spelling and here she could yours.
+Make all tyrants, as not does in despising woes
+Because any so duty either to them,
+His happy in her soul's heart
+To kill thrust for a sight! must weep.
+
+MENENIUS:
+Marry, my only Henry,
+Hasting its ard all his great hoin courtesy?
+
+SICINIUS:
+Far no lord

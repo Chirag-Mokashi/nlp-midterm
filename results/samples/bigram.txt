@@ -1,0 +1,33 @@
+Bigram - validation loss 2.4822 nats
+prompt: newline, 500 characters, temperature 1.0, seed 1337
+----------------------------------------------------------------------
+
+
+
+CExthy brid owindakis by bth
+
+Hiset bube d e.
+S:
+O:
+IS:
+Falatanss:
+Wanthar u qur, vet?
+F dilasoate awice my.
+
+Hastarom oroup
+Yowhthetof isth ble mil ndill, ath iree sengmin lat Heriliovets, and Win nghirileranousel lind me l.
+HAshe ce hiry:
+Supr aisspllw y.
+Hentofu n Boopetelaves
+MP:
+
+Pl, d mothakleo Windo whth eisbyo the m dourive we higend t so mower; te
+
+AN ad nterupt f s ar iris! m:
+
+Thiny aleronth,
+Mad
+Whed my o myr f-
+LIERor,
+SS&isar adsal thes ghesthidin cour ay aney Iry ts I fr t ce.
+J

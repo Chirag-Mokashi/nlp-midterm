@@ -21,7 +21,7 @@
 | Code | Drafted the implementations | Read every function, ran them, debugged failures |
 | Running the experiments | — | **Entirely mine** — I ran all training in Colab |
 | Reading generated samples and judging quality | — | **Entirely mine** |
-| Results interpretation and reflection | Reviewed my drafts and pushed back where a claim was not supported by a number | **My writing** |
+| Results interpretation and reflection | Checked each of my claims against the measured numbers, corrected the ones that were wrong, and edited my grammar and phrasing | **My observations, judgments and conclusions** |
 
 ---
 
@@ -89,9 +89,9 @@ whole corpus, once in PyTorch over sampled batches — which agreed to within
 0.003 nats.
 
 **Something I noticed in the output myself:** the bigram's generated text
-contains a `$`. There is exactly one `$` in the entire 1.1M-character corpus, so
-it should essentially never appear. It appears because add-1 smoothing gives it
-a floor probability after every character. So smoothing is required *and* it
+contains a `&`. There are exactly three `&` in the entire 1.1M-character corpus,
+so it should essentially never appear. It appears because add-1 smoothing gives
+it a floor probability after every character. So smoothing is required *and* it
 distorts the model — I would not have thought of that as a trade-off before
 seeing it in the sample.
 
@@ -132,10 +132,45 @@ the full run.)*
 **What I did:** ran the real training, and all the numbers in the results table
 come from my own run, not from the AI's pilot runs on a different machine.
 
-### Next entries
+### 2026-11-02 — Hours 7-8: interpretation, reflection, and README
 
-- Hour 7: results table and interpretation
-- Hour 8: README and reflection
+**How this part was written, stated plainly.** I read the generated samples,
+the results table and the learning-curve plot myself and wrote down what I saw
+and what I concluded from it. The AI then did two things with that: it checked
+my claims against the measured numbers, and it edited my English. Every
+observation, comparison and verdict in §2.3, §3.3, §4.3, §5.5 and §6 is mine;
+the grammar and sentence construction were edited with assistance.
+
+**What the check actually caught.** Three of my claims were wrong against my own
+results, and they were not phrasing problems:
+
+- I called 1.5048 and 1.5180 *training* losses. They are *validation* losses at
+  each model's best checkpoint — the LSTM's training loss was 1.0792.
+- In the "what did the transformer improve" answer I wrote that the transformer
+  *underperformed* the LSTM on final validation loss. It is the other way round
+  (1.5219 against 1.5445), and it contradicted my own answer two paragraphs
+  earlier.
+- My reflection said the LSTM's weakness was its "relatively short context
+  window". Both models were given the identical 128-character window on
+  purpose; the LSTM's limitation is that it compresses that window into one
+  fixed-size state, not that it sees less of it.
+
+Two more were overclaims rather than errors. I had written that the attention
+heads attend to "line formatting and punctuation marks" — the heatmap shows a
+vertical stripe at one position, but nothing in the notebook decodes *which*
+character sits there, so that was a cause I inferred and stated as an
+observation. It now describes what is actually visible. I had also written in
+§5.5 that the transformer produced "slightly more cohesive" text while §4.3 said
+the two were indistinguishable; the §4.3 reading is the honest one and both now
+say so.
+
+**What I decided not to do.** A seed-variance check across three seeds on a
+second machine confirmed the ordering between the two models holds, but it is
+not part of the submission — the assignment asks for three models and a
+comparison, and adding an experiment nobody asked for is scope, not rigour.
+
+*(To fill in myself: which of those three corrections I think I should have
+caught on my own re-read, and why I did not.)*
 
 ---
 

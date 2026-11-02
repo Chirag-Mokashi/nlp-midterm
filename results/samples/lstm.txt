@@ -1,0 +1,22 @@
+LSTM - validation loss 1.5445 nats
+prompt: newline, 500 characters, temperature 1.0, seed 1337
+----------------------------------------------------------------------
+
+
+DUCHESS OF YORK:
+Away with the disposition! I'll grant thee,
+Takes are their weary vetiar divers,
+But carry as fast, an one penount, to use.
+Becomes her lip, even we sends me at Hercurevite,
+Hold me now to you most his depeal.
+
+AUFIDIUS:
+I would have show you:
+That I may pass at gone:
+I look more glad Warwick do pity to't.
+
+FLORIZEL:
+I had not possessed; they say, none, the son; if he must not know
+If I, as Prince of Warwick, being best say,
+disloucest he may in courtesy? Lay reply,
+After march

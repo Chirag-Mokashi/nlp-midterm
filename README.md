@@ -3,9 +3,10 @@
 Applied NLP midterm project. Three language models, one task, one dataset, one
 set of hyperparameters, and an honest look at whether attention was worth it.
 
-> **Status: in progress.** The notebook is complete and verified; the final
-> numbers, interpretation, and reflection are filled in from the full training
-> run. Sections marked `TO FILL` are not finished yet.
+> **Status: complete.** Every number below is measured from one full training
+> run on a Colab T4, in a single session, with all three models on the same
+> device. The notebook in this repository is the executed version, outputs
+> included.
 
 ---
 
@@ -86,8 +87,8 @@ the 4,225 possible character pairs occur in training, and 187 validation
 positions (0.17%) use a pair that training never saw. Unsmoothed, those give
 `-log(0)` and the validation loss is infinite. Add-1 smoothing fixes that, but
 it is not free — it assigns a floor probability to characters that essentially
-never occur, which is why `$` (a character appearing exactly **once** in 1.1M
-characters) shows up in the bigram's generated text.
+never occur, which is why `&` (a character appearing exactly **three times** in
+1.1M characters) shows up in the bigram's generated text.
 
 ### 2. LSTM
 
@@ -186,24 +187,71 @@ architecture.
 
 ## Which model performed best?
 
-`TO FILL` — from the full run. The results table is generated from measured
-values in [`results/results_table.md`](results/results_table.md), and the raw
-numbers are in `results/metrics.json`.
+| Model | Parameters | Val loss (final) | Best val loss | Training time |
+| --- | ---: | ---: | ---: | ---: |
+| Bigram | 0 | 2.4822 | — | 0.0036 s |
+| LSTM | 841,905 | 1.5445 | **1.5048** (step 2500) | 104.7 s |
+| Transformer | 826,433 | **1.5219** | 1.5180 (step 4000) | 166.7 s |
 
-One thing already known from the pilot run and worth reporting rather than
-hiding: **the ranking depends on the step budget.** The LSTM is ahead for the
-first few thousand steps, reaches its best validation loss, and then begins to
-overfit, while the transformer starts slower and is still improving when the
-LSTM has turned around. The learning-curve plot in the notebook shows the
-crossover directly.
+**It depends on what you mean by best, and both answers are in that table.** At
+the fixed 5,000-step budget the transformer wins on final validation loss, by
+0.0226 nats. On the best checkpoint either model ever reached, the LSTM wins, by
+0.0132 — it peaks at step 2500 and then begins to overfit, while the transformer
+is still improving when the budget runs out. The crossover happens between steps
+3500 and 4000 and is visible directly in the learning-curve plot in the
+notebook's §5.1.
+
+Reporting only one of those would have made the result look cleaner than it is,
+which is why the step budget was chosen before the numbers were known and the
+crossover is reported rather than buried. Full config and losses are in
+[`results/metrics.json`](results/metrics.json); the table above is generated
+from measured values in
+[`results/results_table.md`](results/results_table.md).
 
 ## What did attention improve?
 
-`TO FILL`
+Against the bigram, almost everything: spelling, word shapes, the `SPEAKER:`
+dialogue format, and dependencies reaching far beyond one character — 2.4822 to
+1.5219 nats, a perplexity of 11.97 down to 4.58.
+
+Against the LSTM the improvement in final loss is small, and the more
+interesting difference is in the **shape** of the two learning curves. The LSTM
+compresses the whole 128-character window into one fixed-size state and had
+stopped improving by step 2500; attention lets every position read any earlier
+position directly, and the transformer had not stopped improving by step 5000.
+The train/validation gap says the same thing — 0.465 for the LSTM against 0.339
+for the transformer.
+
+Looking at the attention weights themselves (§4.4 of the notebook) shows
+something the loss number cannot: the four heads in the first block specialise
+on their own. Two are almost purely local, a single bright diagonal; the other
+two spread their weight widely over earlier positions, and one shows a vertical
+stripe where many later positions attend back to one particular earlier
+character. Nothing in the objective asks them to divide the work up that way.
 
 ## What did I learn from this project?
 
-`TO FILL`
+Mostly that the setup decides the result, and that the honest version of a
+comparison is messier than the clean one.
+
+- **The step budget picked the winner.** At `lr=3e-3` the LSTM leads for the
+  first ~3,500 steps and the transformer overtakes after; at `lr=1e-3` the
+  transformer never catches up at all. Stopping at 2,000 steps or at 10,000
+  would have produced two different conclusions from the same code.
+- **Equal steps and equal wall-clock time are different experiments.** They
+  reward different architectures, and which one you choose has to be decided
+  and stated before the numbers arrive.
+- **Some bugs don't announce themselves.** A broken causal mask produces an
+  excellent-looking loss and a worthless model, so it gets tested rather than
+  assumed — the notebook edits a later character and confirms earlier
+  predictions do not move by `0.000e+00`.
+- **A small number can still be a real difference, and it can still be
+  invisible.** 0.023 nats separates the two trained models, and I could not
+  tell their generated samples apart. Both of those facts belong in the
+  write-up.
+- **Baselines first.** Computing `ln(65)` = 4.1744 and the unigram entropy
+  3.3128 before building anything meant a loss number had something to mean on
+  arrival, instead of just looking low.
 
 ## How did I use AI responsibly?
 

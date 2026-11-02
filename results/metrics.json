@@ -1,0 +1,48 @@
+{
+  "config": {
+    "block_size": 128,
+    "batch_size": 64,
+    "max_steps": 5000,
+    "eval_interval": 500,
+    "eval_batches": 50,
+    "learning_rate": 0.003,
+    "n_embd": 128,
+    "n_head": 4,
+    "n_layer": 4,
+    "dropout": 0.1,
+    "lstm_hidden": 240,
+    "lstm_layers": 2
+  },
+  "device": "cuda",
+  "baselines": {
+    "uniform": 4.174387269895637,
+    "unigram": 3.3127951622009277
+  },
+  "results": {
+    "Bigram": {
+      "train_loss": 2.45159912109375,
+      "val_loss": 2.4822030067443848,
+      "train_time_s": 0.0036187840000252436,
+      "parameters": 0,
+      "notes": "one counting pass, no gradient training; add-1 smoothing"
+    },
+    "LSTM": {
+      "train_loss": 1.0791690349578857,
+      "val_loss": 1.544457197189331,
+      "train_time_s": 104.70263082899771,
+      "parameters": 841905,
+      "notes": "2 layers, hidden 240, 5000 steps",
+      "best_val_loss": 1.504838228225708,
+      "best_val_step": 2500
+    },
+    "Transformer": {
+      "train_loss": 1.18337082862854,
+      "val_loss": 1.521888256072998,
+      "train_time_s": 166.6934209769969,
+      "parameters": 826433,
+      "notes": "4 blocks, 4 heads, n_embd 128, 5000 steps",
+      "best_val_loss": 1.5179792642593384,
+      "best_val_step": 4000
+    }
+  }
+}
