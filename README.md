@@ -203,11 +203,20 @@ architecture.
 
 ## Which model performed best?
 
-| Model | Parameters | Val loss (final) | Best val loss | Training time |
-| --- | ---: | ---: | ---: | ---: |
-| Bigram | 0 | 2.4822 | — | 0.0036 s |
-| LSTM | 841,905 | 1.5445 | **1.5048** (step 2500) | 104.7 s |
-| Transformer | 826,433 | **1.5219** | 1.5180 (step 4000) | 166.7 s |
+| Model | Parameters | Train loss | Val loss (final) | Best val loss | Training time | Generated text quality |
+| --- | ---: | ---: | ---: | ---: | ---: | :--- |
+| Bigram | 0 | 2.4516 | 2.4822 | — | 0.0036 s | Low |
+| LSTM | 841,905 | 1.0792 | 1.5445 | **1.5048** (step 2500) | 104.7 s | Medium |
+| Transformer | 826,433 | 1.1834 | **1.5219** | 1.5180 (step 4000) | 166.7 s | Medium |
+
+The last column is a judgement of mine, not a measurement, which is why it lives
+here and not in the notebook-generated table: the bigram produces letter clusters
+that are not words, so **Low**; both trained models produce correct `SPEAKER:`
+formatting and real character names from the corpus but still invent words, and I
+could not reliably tell their samples apart, so both get the same **Medium**
+rather than a ranking the 0.023-nat gap between them does not support. The
+samples themselves are in [`results/samples/`](results/samples/) and side by side
+in the notebook's §5.3.
 
 **It depends on what you mean by best, and both answers are in that table.** At
 the fixed 5,000-step budget the transformer wins on final validation loss, by
